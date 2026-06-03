@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mini World Web Mobile Clone</title>
+    <style>
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        /* Tâm ngắm Mini World */
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.6); transform: translate(-50%, -50%); pointer-events: none; border-radius: 50%; }
+
+        /* Giao diện nút bấm ảo chuẩn Mini World (Màu xanh dương/bo tròn) */
+        #dpad { position: absolute; bottom: 25px; left: 25px; width: 130px; height: 130px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; z-index: 5; }
+        .btn-move { background: rgba(75, 195, 255, 0.4); border: 2px solid #4bc3ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; box-shadow: 0 4px 0 #0f4c81; }
+        .btn-move:active { background: #4bc3ff; transform: translateY(2px); box-shadow: 0 2px 0 #0f4c81; }
+
+        #actions { position: absolute; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 5; }
+        .btn-action { width: 65px; height: 65px; background: rgba(15, 76, 129, 0.6); border: 2px solid #4bc3ff; color: white; border-radius: 50%; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 #082d50; }
+        .btn-action:active { background: #4bc3ff; color: #0f4c81; transform: translateY(2px); box-shadow: 0 2px 0 #082d50; }
+
+        /* Thanh Hotbar bo góc tròn kiểu Mini World */
+        #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(15, 76, 129, 0.7); padding: 6px; border-radius: 20px; z-index: 5; border: 2px solid #4bc3ff; }
+        .slot { width: 50px; height: 50px; border: 2px solid #0f4c81; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #333; font-size: 11px; font-weight: bold; border-radius: 12px; cursor: pointer; background-size: cover; }
+        .slot.active { border-color: #ffd100; box-shadow: 0 0 12px #ffd100; transform: scale(1.05); background-color: #e3f2fd; }
+        .slot span { color: #0f4c81; text-shadow: none; font-size: 12px; }
+
+        /* Giao diện Balo & Chế tạo tone màu Xanh/Vàng đặc trưng */
+        #backpack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10; display: none; align-items: center; justify-content: center; padding: 10px; }
+        .window { width: 95%; max-width: 550px; height: 85%; background: #0f4c81; border: 4px solid #4bc3ff; border-radius: 20px; padding: 15px; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .tab { padding: 8px 20px; background: #082d50; border: 2px solid #4bc3ff; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .tab.active { background: #ffd100; color: #0f4c81; border-color: #fff; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow-y: auto; flex-grow: 1; background: rgba(255,255,255,0.9); padding: 12px; border-radius: 12px; color: #333; }
+        .grid-item { background: #e3f2fd; border: 2px solid #4bc3ff; height: 80px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; text-align: center; color: #0f4c81; cursor: pointer; }
+        .grid-item:active { background: #ffd100; }
+        #btn-close-backpack { background: #ff5252; color: white; border: 2px solid #fff; padding: 10px; border-radius: 12px; margin-top: 10px; font-weight: bold; box-shadow: 0 4px 0 #b71c1c;}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="crosshair"></div>
+
+    <div id="dpad">
+        <div></div><div class="btn-move" id="btn-w">▲</div><div></div>
+        <div class="btn-move" id="btn-a">◀</div><div></div><div class="btn-move" id="btn-d">▶</div>
+        <div></div><div class="btn-move" id="btn-s">▼</div><div></div>
+    </div>
+
+    <div id="actions">
+        <button class="btn-action" id="btn-jump">NHẢY</button>
+        <button class="btn-action" id="btn-break" style="background: rgba(244,67,54,0.7);">CHẶT/ĐẬP</button>
+        <button class="btn-action" id="btn-place" style="background: rgba(76,175,80,0.7);">ĐẶT KHỐI</button>
+        <button class="btn-action" id="btn-bag" style="background: #ffd100; color: #0f4c81; border-color: #fff;">BALO</button>
+    </div>
+
+    <div id="hotbar">
+        <div class="slot active" onclick="selectSlot(0)" id="s0">Khối Gỗ<br><span id="c0">0</span></div>
+        <div class="slot" onclick="selectSlot(1)" id="s1">Ván Gỗ<br><span id="c1">0</span></div>
+        <div class="slot" onclick="selectSlot(2)" id="s2">Bàn CT<br><span id="c2">0</span></div>
+        <div class="slot" onclick="selectSlot(3)" id="s3">Khối Đất<br><span id="c3">0</span></div>
+    </div>
+
+    <div id="backpack-overlay">
+        <div class="window">
+            <div class="tabs">
+                <button class="tab active" id="tab-inv" onclick="switchTab('inv')">Túi Đồ</button>
+                <button class="tab" id="tab-craft" onclick="switchTab('craft')">Chế Tạo</button>
+            </div>
+            <div class="grid" id="backpack-grid"></div>
+            <button id="btn-close-backpack" onclick="toggleBackpack()">TRỞ LẠI GAME</button>
+        </div>
+    </div>
+        <script>
+        // --- 1. ÂM THANH TỰ ĐỘNG KHÔNG CẦN FILE NGOÀI (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if(type === 'break') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if(type === 'place') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+            }
+        }
+
+        // --- 2. HỆ THỐNG DỮ LIỆU GAME VÀ CÔNG THỨC MINI WORLD ---
+        let inventory = { wood: 4, planks: 0, crafting_table: 0, dirt: 5, leaves: 0 }; 
+        let hotbarIds = ['wood', 'planks', 'crafting_table', 'dirt'];
+        let activeSlotIndex = 0;
+        let currentTab = 'inv';
+        let nearCraftingTable = false;
+
+        // --- 3. KHỞI TẠO ĐỒ HỌA 3D ---
+        const scene = new THREE.Scene();
+        let skyColor = new THREE.Color(0x87CEEB);
+        scene.background = skyColor;
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.04);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.6); sunLight.position.set(10, 30, 10); scene.add(sunLight);
+
+        // --- 4. TẠO VẬT LIỆU HOẠT HÌNH TƯƠI SÁNG ---
+        function createCartoonTexture(baseColor, detailColor, pattern) {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = baseColor; ctx.fillRect(0,0,16,16);
+            ctx.fillStyle = detailColor;
+            if(pattern === 'dirt') { ctx.fillRect(2,3,3,2); ctx.fillRect(9,10,4,2); ctx.fillRect(11,2,2,3); }
+            if(pattern === 'planks') { ctx.fillRect(0,4,16,1); ctx.fillRect(0,9,16,1); ctx.fillRect(0,14,16,1); ctx.fillRect(5,0,1,4); ctx.fillRect(11,5,1,4); }
+            if(pattern === 'wood') { ctx.fillRect(0,0,16,2); ctx.fillRect(0,14,16,2); ctx.strokeRect(2,2,12,12); }
+            if(pattern === 'leaves') { ctx.fillRect(1,2,2,2); ctx.fillRect(6,5,3,3); ctx.fillRect(11,10,3,2); }
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+            return new THREE.MeshLambertMaterial({ map: tex });
+        }
+
+        const matDirt = createCartoonTexture('#9c6644', '#7f5539', 'dirt');
+        const matWood = createCartoonTexture('#6c584c', '#adc178', 'wood');
+        const matPlanks = createCartoonTexture('#ddb892', '#b08968', 'planks');
+        const matLeaves = createCartoonTexture('#52b788', '#74c69d', 'leaves');
+        
+        const canvasCT = document.createElement('canvas'); canvasCT.width=16; canvasCT.height=16;
+        const ctxCT = canvasCT.getContext('2d'); ctxCT.fillStyle="#ffd100"; ctxCT.fillRect(0,0,16,16);
+        ctxCT.fillStyle="#0f4c81"; ctxCT.fillRect(3,3,10,10);
+        const texCT = new THREE.CanvasTexture(canvasCT); texCT.magFilter = THREE.NearestFilter;
+        const matCraftingTable = new THREE.MeshLambertMaterial({ map: texCT });
+
+        const blockMaterials = { wood: matWood, planks: matPlanks, crafting_table: matCraftingTable, dirt: matDirt, leaves: matLeaves };
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const blocks = [];
+
+        // --- 5. SINH ĐỊA HÌNH VÀ CÂY CỐI ---
+        for (let x = -12; x <= 12; x++) {
+            for (let z = -12; z <= 12; z++) {
+                const block = new THREE.Mesh(geometry, matDirt); block.position.set(x, 0, z); block.blockType = 'dirt';
+                scene.add(block); blocks.push(block);
+            }
+        }
+        function generateTree(tx, tz) {
+            for(let h=1; h<=3; h++) {
+                const log = new THREE.Mesh(geometry, matWood); log.position.set(tx, h, tz); log.blockType = 'wood';
+                scene.add(log); blocks.push(log);
+            }
+            for(let lx=-1; lx<=1; lx++) {
+                for(let lz=-1; lz<=1; lz++) {
+                    const leaf = new THREE.Mesh(geometry, matLeaves); leaf.position.set(tx+lx, 4, tz+lz); leaf.blockType = 'leaves';
+                    scene.add(leaf); blocks.push(leaf);
+                }
+            }
+        }
+        generateTree(4, 4); generateTree(-5, 3); generateTree(0, -5);
+        camera.position.set(0, 2, 6);
+                  // --- 6. XOAY CAMERA MƯỢT MÀ BẰNG CẢM ỨNG VUỐT ---
+        let touchStart = { x: 0, y: 0 }; let rotation = { x: 0, y: 0 };
+        window.addEventListener('touchstart', (e) => { if(e.touches[0].clientX > window.innerWidth / 2) { touchStart.x = e.touches[0].clientX; touchStart.y = e.touches[0].clientY; } });
+        window.addEventListener('touchmove', (e) => {
+            if(e.touches[0].clientX > window.innerWidth / 2) {
+                const deltaX = e.touches[0].clientX - touchStart.x; const deltaY = e.touches[0].clientY - touchStart.y;
+                rotation.y -= deltaX * 0.006; rotation.x -= deltaY * 0.006;
+                rotation.x = Math.max(-Math.PI/2.3, Math.min(Math.PI/2.3, rotation.x));
+                camera.quaternion.setFromEuler(new THREE.Euler(rotation.x, rotation.y, 0, 'YXZ'));
+                touchStart.x = e.touches[0].clientX; touchStart.y = e.touches[0].clientY;
+            }
+        });
+
+        // --- 7. ĐIỀU KHIỂN DI CHUYỂN NÚT ẢO D-PAD ---
+        const move = { f: false, b: false, l: false, r: false };
+        let velocity = new THREE.Vector3(), canJump = false;
+        function setupMoveBtn(id, direction) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); move[direction] = true; });
+            btn.addEventListener('touchend', () => move[direction] = false);
+        }
+        setupMoveBtn('btn-w', 'f'); setupMoveBtn('btn-s', 'b'); setupMoveBtn('btn-a', 'l'); setupMoveBtn('btn-d', 'r');
+        document.getElementById('btn-jump').addEventListener('touchstart', () => { if(canJump) velocity.y += 8.5; });
+
+        // --- 8. CƠ CHẾ CHẶT CÂY & ĐẶT KHỐI CHUẨN ---
+        const raycaster = new THREE.Raycaster(); const center = new THREE.Vector2(0, 0);
+
+        document.getElementById('btn-break').addEventListener('touchstart', () => {
+            raycaster.setFromCamera(center, camera);
+            const intersects = raycaster.intersectObjects(blocks);
+            if (intersects.length > 0 && intersects[0].distance < 5) {
+                const target = intersects[0].object;
+                playSound('break');
+                if(inventory[target.blockType] !== undefined) inventory[target.blockType]++;
+                else inventory[target.blockType] = 1;
+                scene.remove(target);
+                blocks.splice(blocks.indexOf(target), 1);
+                updateUI(); checkCraftingTableProximity();
+            }
+        });
+
+        document.getElementById('btn-place').addEventListener('touchstart', () => {
+            const currentItem = hotbarIds[activeSlotIndex];
+            if (!currentItem || inventory[currentItem] <= 0) return;
+
+            raycaster.setFromCamera(center, camera);
+            const intersects = raycaster.intersectObjects(blocks);
+            if (intersects.length > 0 && intersects[0].distance < 5) {
+                const intersect = intersects[0];
+                const newBlock = new THREE.Mesh(geometry, blockMaterials[currentItem]);
+                newBlock.position.copy(intersect.object.position).add(intersect.face.normal);
+                newBlock.blockType = currentItem;
+                
+                playSound('place');
+                scene.add(newBlock); blocks.push(newBlock);
+                inventory[currentItem]--;
+                updateUI(); checkCraftingTableProximity();
+            }
+        });
+
+        function checkCraftingTableProximity() {
+            nearCraftingTable = false;
+            for(let b of blocks) {
+                if(b.blockType === 'crafting_table' && camera.position.distanceTo(b.position) < 4.5) {
+                    nearCraftingTable = true; break;
+                }
+            }
+        }
+
+        // --- 9. HỆ THỐNG KHO ĐỒ VÀ GIAO DIỆN CHẾ TẠO ---
+        function toggleBackpack() {
+            const overlay = document.getElementById('backpack-overlay');
+            overlay.style.display = (overlay.style.display === 'flex') ? 'none' : 'flex';
+            if(overlay.style.display === 'flex') { checkCraftingTableProximity(); switchTab(currentTab); }
+        }
+        document.getElementById('btn-bag').addEventListener('touchstart', toggleBackpack);
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-inv').classList.toggle('active', tab === 'inv');
+            document.getElementById('tab-craft').classList.toggle('active', tab === 'craft');
+            const grid = document.getElementById('backpack-grid'); grid.innerHTML = '';
+
+            if (tab === 'inv') {
+                grid.innerHTML += `<div class="grid-item">Khối Gỗ<br>x${inventory.wood}</div>`;
+                grid.innerHTML += `<div class="grid-item">Ván Gỗ<br>x${inventory.planks}</div>`;
+                grid.innerHTML += `<div class="grid-item">Bàn CT<br>x${inventory.crafting_table}</div>`;
+                grid.innerHTML += `<div class="grid-item">Khối Đất<br>x${inventory.dirt}</div>`;
+                grid.innerHTML += `<div class="grid-item">Lá Cây<br>x${inventory.leaves}</div>`;
+            } else {
+                grid.innerHTML += `<div class="grid-item" onclick="craftItem('planks')" style="background:#ffd100; color:#0f4c81;">Bào Ván Gỗ<br><small>(Tốn 1 Gỗ)</small></div>`;
+                grid.innerHTML += `<div class="grid-item" onclick="craftItem('crafting_table')" style="background:#ffd100; color:#0f4c81;">Ghép Bàn CT<br><small>(Tốn 4 Ván)</small></div>`;
+
+                if(nearCraftingTable) {
+                    grid.innerHTML += `<div class="grid-item" onclick="craftItem('special')" style="background:#a2d2ff; grid-column: span 2; border: 2px dashed #0f4c81;">🛠️ KIẾM GỖ CAO CẤP<br><small>(Công thức nâng cao)</small></div>`;
+                } else {
+                    grid.innerHTML += `<div class="grid-item" style="background:#ccc; grid-column: span 2; color:#777; font-size:10px; cursor:default;">🔒 Đặt Bàn Chế Tạo xuống đất và đứng gần để mở công thức nâng cao</div>`;
+                }
+            }
+        }
+
+        function craftItem(type) {
+            if (type === 'planks' && inventory.wood >= 1) { inventory.wood -= 1; inventory.planks += 4; } 
+            else if (type === 'crafting_table' && inventory.planks >= 4) { inventory.planks -= 4; inventory.crafting_table += 1; } 
+            else if (type === 'special') { alert("Bạn đã chế tạo thành công công cụ cao cấp từ bàn chế tạo!"); return; }
+            else { alert("Thiếu nguyên liệu rồi cậu ơi!"); return; }
+            updateUI(); switchTab('craft');
+        }
+
+        function selectSlot(idx) { activeSlotIndex = idx; for(let i=0; i<4; i++) document.getElementById('s'+i).classList.toggle('active', i === idx); }
+        function updateUI() { for(let i=0; i<4; i++) { document.getElementById('c'+i).innerText = inventory[hotbarIds[i]]; } }
+        updateUI();
+
+        // --- 10. VÒNG LẶP DI CHUYỂN & HỆ THỐNG THỜI GIAN NGÀY/ĐÊM ---
+        const clock = new THREE.Clock();
+        let gameTime = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            gameTime += delta * 0.05;
+            let lightCycle = (Math.sin(gameTime) + 1) / 2;
+            skyColor.setHSL(0.55, 0.5, lightCycle * 0.5 + 0.2);
+            ambientLight.intensity = lightCycle * 0.6 + 0.3;
+
+            velocity.x -= velocity.x * 10.0 * delta; velocity.z -= velocity.z * 10.0 * delta; velocity.y -= 24.0 * delta;
+
+            const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); camDir.y = 0; camDir.normalize();
+            const camRight = new THREE.Vector3(); camRight.crossVectors(camera.up, camDir).normalize();
+
+            let moveVector = new THREE.Vector3();
+            if (move.f) moveVector.add(camDir); if (move.b) moveVector.sub(camDir);
+            if (move.l) moveVector.add(camRight); if (move.r) moveVector.sub(camRight);
+            moveVector.normalize();
+
+            velocity.x += moveVector.x * 32.0 * delta; velocity.z += moveVector.z * 32.0 * delta;
+            camera.position.x += velocity.x * delta; camera.position.z += velocity.z * delta; camera.position.y += velocity.y * delta;
+
+            if (camera.position.y < 2) { velocity.y = 0; camera.position.y = 2; canJump = true; } 
+            else { canJump = false; }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    </script>
+</body>
+</html>
