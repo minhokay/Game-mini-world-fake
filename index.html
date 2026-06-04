@@ -2,319 +2,478 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mini World Web Mobile Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+    <title>Mini World Web - Sinh Ton Vo Tan</title>
     <style>
-        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; margin: 0; padding: 0; touch-action: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
         canvas { display: block; width: 100%; height: 100%; }
         
-        /* Tâm ngắm Mini World */
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.6); transform: translate(-50%, -50%); pointer-events: none; border-radius: 50%; }
+        /* HUD Sinh Tồn */
+        #hud-top { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 5; }
+        .bar-container { display: flex; gap: 2px; letter-spacing: 2px; }
+        #hp-bar { color: red; font-size: 18px; text-shadow: 1px 1px 0 #000; }
+        #hunger-bar { font-size: 16px; text-shadow: 1px 1px 0 #000; }
+        
+        /* Tâm ngắm & Tiến trình đập khối */
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; z-index: 5; pointer-events: none;}
+        #break-progress { position: absolute; top: 50%; left: 50%; width: 32px; height: 32px; transform: translate(-50%, -50%); border-radius: 50%; border: 4px solid transparent; border-top-color: #ffd100; z-index: 6; display: none; }
+        
+        /* Điều khiển Mobile: Joystick & Nút Nhảy */
+        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255,255,255,0.2); border-radius: 50%; z-index: 5; }
+        #joystick-knob { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255,255,255,0.6); border-radius: 50%; pointer-events: none; }
+        #btn-jump { position: absolute; bottom: 30px; right: 30px; width: 65px; height: 65px; background: rgba(255,255,255,0.3); border: 2px solid #fff; border-radius: 50%; color: white; font-weight: bold; z-index: 5; display: flex; align-items: center; justify-content: center; }
 
-        /* Giao diện nút bấm ảo chuẩn Mini World (Màu xanh dương/bo tròn) */
-        #dpad { position: absolute; bottom: 25px; left: 25px; width: 130px; height: 130px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; z-index: 5; }
-        .btn-move { background: rgba(75, 195, 255, 0.4); border: 2px solid #4bc3ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; box-shadow: 0 4px 0 #0f4c81; }
-        .btn-move:active { background: #4bc3ff; transform: translateY(2px); box-shadow: 0 2px 0 #0f4c81; }
+        /* Các nút chức năng đổi góc nhìn, trạng thái */
+        #action-btns { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 5; }
+        .btn-state { padding: 8px 12px; background: rgba(0,0,0,0.6); border: 2px solid #fff; color: white; border-radius: 10px; font-weight: bold; font-size: 11px; }
+        
+        /* Hotbar 9 ô chứa vật phẩm */
+        #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; background: rgba(0,0,0,0.6); padding: 4px; border-radius: 10px; z-index: 5; }
+        .slot { width: 42px; height: 42px; border: 2px solid #555; background: #fff; display: flex; align-items: flex-end; justify-content: center; font-size: 10px; font-weight: bold; border-radius: 6px; position: relative; }
+        .slot.active { border-color: #ffd100; transform: translateY(-4px); }
+        .slot .qty { position: absolute; bottom: 1px; right: 3px; color: #000; font-size: 9px; }
+        .item-name-float { position: absolute; top: -24px; width: 100%; text-align: center; color: white; font-size: 11px; text-shadow: 1px 1px 0 #000; display: none; white-space: nowrap; left: 50%; transform: translateX(-50%);}
+        .slot.active .item-name-float { display: block; }
+        
+        /* Cùng cảm ứng xoay camera bên phải màn hình */
+        #touch-right { position: absolute; top: 0; right: 0; width: 50%; height: 100%; z-index: 4; }
 
-        #actions { position: absolute; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 5; }
-        .btn-action { width: 65px; height: 65px; background: rgba(15, 76, 129, 0.6); border: 2px solid #4bc3ff; color: white; border-radius: 50%; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 #082d50; }
-        .btn-action:active { background: #4bc3ff; color: #0f4c81; transform: translateY(2px); box-shadow: 0 2px 0 #082d50; }
-
-        /* Thanh Hotbar bo góc tròn kiểu Mini World */
-        #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(15, 76, 129, 0.7); padding: 6px; border-radius: 20px; z-index: 5; border: 2px solid #4bc3ff; }
-        .slot { width: 50px; height: 50px; border: 2px solid #0f4c81; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #333; font-size: 11px; font-weight: bold; border-radius: 12px; cursor: pointer; background-size: cover; }
-        .slot.active { border-color: #ffd100; box-shadow: 0 0 12px #ffd100; transform: scale(1.05); background-color: #e3f2fd; }
-        .slot span { color: #0f4c81; text-shadow: none; font-size: 12px; }
-
-        /* Giao diện Balo & Chế tạo tone màu Xanh/Vàng đặc trưng */
-        #backpack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10; display: none; align-items: center; justify-content: center; padding: 10px; }
-        .window { width: 95%; max-width: 550px; height: 85%; background: #0f4c81; border: 4px solid #4bc3ff; border-radius: 20px; padding: 15px; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-        .tab { padding: 8px 20px; background: #082d50; border: 2px solid #4bc3ff; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .tab.active { background: #ffd100; color: #0f4c81; border-color: #fff; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow-y: auto; flex-grow: 1; background: rgba(255,255,255,0.9); padding: 12px; border-radius: 12px; color: #333; }
-        .grid-item { background: #e3f2fd; border: 2px solid #4bc3ff; height: 80px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; text-align: center; color: #0f4c81; cursor: pointer; }
-        .grid-item:active { background: #ffd100; }
-        #btn-close-backpack { background: #ff5252; color: white; border: 2px solid #fff; padding: 10px; border-radius: 12px; margin-top: 10px; font-weight: bold; box-shadow: 0 4px 0 #b71c1c;}
+        /* TỰ ĐỘNG CÂN BẰNG GIAO DIỆN KHI XOAY NGANG MÀN HÌNH */
+        @media (orientation: landscape) {
+            #joystick-zone { bottom: 15px; left: 30px; width: 110px; height: 110px; }
+            #btn-jump { bottom: 25px; right: 40px; width: 60px; height: 60px; }
+            #hotbar { bottom: 5px; }
+            .slot { width: 38px; height: 38px; font-size: 9px; }
+            #backpack-screen { width: 75%; height: 85%; }
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+    <div id="hud-top">
+        <div id="hp-bar">♥♥♥♥♥♥♥♥♥♥</div>
+        <div id="hunger-bar">🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗</div>
+    </div>
 
     <div id="crosshair"></div>
-
-    <div id="dpad">
-        <div></div><div class="btn-move" id="btn-w">▲</div><div></div>
-        <div class="btn-move" id="btn-a">◀</div><div></div><div class="btn-move" id="btn-d">▶</div>
-        <div></div><div class="btn-move" id="btn-s">▼</div><div></div>
+    <div id="break-progress"></div>
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <div id="btn-jump">NHẢY</div>
+    <div id="touch-right"></div>
+    
+    <div id="action-btns">
+        <div class="btn-state" id="btn-camera">Góc nhìn 1</div>
+        <div class="btn-state" id="btn-movement">Bình Thường</div>
+        <div class="btn-state" id="btn-bag" style="background:#2196f3; border-color:#2196f3;">🎒 Balo</div>
     </div>
 
-    <div id="actions">
-        <button class="btn-action" id="btn-jump">NHẢY</button>
-        <button class="btn-action" id="btn-break" style="background: rgba(244,67,54,0.7);">CHẶT/ĐẬP</button>
-        <button class="btn-action" id="btn-place" style="background: rgba(76,175,80,0.7);">ĐẶT KHỐI</button>
-        <button class="btn-action" id="btn-bag" style="background: #ffd100; color: #0f4c81; border-color: #fff;">BALO</button>
+    <div id="hotbar"></div>
+
+    <div id="mob-hp-container" style="position: absolute; display: none; background: rgba(0,0,0,0.8); border: 2px solid #ff5252; padding: 3px 6px; border-radius: 8px; color: white; font-size: 11px; font-weight: bold; z-index: 6; pointer-events: none;">
+        🐗 Dã Nhân: <span id="mob-hp-text" style="color: #ff5252;">♥♥♥♥♥</span>
     </div>
 
-    <div id="hotbar">
-        <div class="slot active" onclick="selectSlot(0)" id="s0">Khối Gỗ<br><span id="c0">0</span></div>
-        <div class="slot" onclick="selectSlot(1)" id="s1">Ván Gỗ<br><span id="c1">0</span></div>
-        <div class="slot" onclick="selectSlot(2)" id="s2">Bàn CT<br><span id="c2">0</span></div>
-        <div class="slot" onclick="selectSlot(3)" id="s3">Khối Đất<br><span id="c3">0</span></div>
-    </div>
-
-    <div id="backpack-overlay">
-        <div class="window">
-            <div class="tabs">
-                <button class="tab active" id="tab-inv" onclick="switchTab('inv')">Túi Đồ</button>
-                <button class="tab" id="tab-craft" onclick="switchTab('craft')">Chế Tạo</button>
+    <div id="backpack-screen" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; height: 85%; background: rgba(25,25,25,0.96); border: 3px solid #ffd100; border-radius: 12px; z-index: 10; display: none; padding: 15px; color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="color: #ffd100; font-size: 15px;">🎒 BALO QUẢN LÝ Ô ĐỒ & CHẾ TẠO</h3>
+            <button onclick="toggleBackpack()" style="padding: 4px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px;">ĐÓNG</button>
+        </div>
+        <div style="display: flex; gap: 12px; height: calc(100% - 35px);">
+            <div style="flex: 1.8;">
+                <p style="font-size: 11px; margin-bottom: 4px; color: #aaa;">Mẹo: Nhấn chọn 1 ô rồi nhấn ô khác để đổi chỗ vật phẩm</p>
+                <div id="backpack-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; background: #151515; padding: 6px; border-radius: 8px; height: 85%; overflow-y: auto;"></div>
             </div>
-            <div class="grid" id="backpack-grid"></div>
-            <button id="btn-close-backpack" onclick="toggleBackpack()">TRỞ LẠI GAME</button>
+            <div style="flex: 1; background: #222; padding: 8px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <h4 style="color: #4caf50; font-size: 13px; border-bottom: 1px solid #333; padding-bottom: 3px;">⚒️ Chế Tạo</h4>
+                <div style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 5px;" id="craft-list">
+                    <div onclick="craftItem('planks')" style="background: #2d2d2d; padding: 6px; border-radius: 5px; font-size: 11px; cursor: pointer;">Gỗ x1 ➔ Ván Gỗ x4</div>
+                    <div onclick="craftItem('wood_axe')" style="background: #2d2d2d; padding: 6px; border-radius: 5px; font-size: 11px; cursor: pointer; border-left: 3px solid #4bc3ff;">Ván Gỗ x3 + Gỗ x2 ➔ 🪓 Rìu Gỗ</div>
+                    <div onclick="craftItem('wood_pickaxe')" style="background: #2d2d2d; padding: 6px; border-radius: 5px; font-size: 11px; cursor: pointer; border-left: 3px solid #ff5252;">Ván Gỗ x3 + Gỗ x2 ➔ ⛏️ Cúp Gỗ</div>
+                </div>
+            </div>
         </div>
     </div>
         <script>
-        // --- 1. ÂM THANH TỰ ĐỘNG KHÔNG CẦN FILE NGOÀI (Web Audio API) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
+        // --- 1. DỮ LIỆU ĐỒ ĐẠC KHỞI TẠO ---
+        let hp = 10, hunger = 10;
+        let moveState = 'normal'; 
+        let isThirdPerson = false;
+        
+        let inventory = { wood: 6, planks: 0, dirt: 12, stone: 0, leaves: 0, copper: 0, silver: 0, iron: 0, gold: 0, diamond: 0, wood_axe: 0, wood_pickaxe: 0, meat: 0 };
+        let hotbarItems = ['wood', 'planks', 'wood_axe', 'wood_pickaxe', 'dirt', 'stone', 'meat', null, null];
+        let bagItems = new Array(40).fill(null);
+        bagItems[0] = 'wood'; bagItems[1] = 'stone'; bagItems[2] = 'dirt';
+        let activeSlot = 0;
+
+        const itemNames = { 
+            wood: 'Khối Gỗ', planks: 'Ván Gỗ', dirt: 'Khối Đất', stone: 'Đá', leaves: 'Lá Cây',
+            copper: 'Quặng Đồng', silver: 'Quặng Bạc', iron: 'Quặng Sắt', gold: 'Quặng Vàng', diamond: 'Kim Cương',
+            wood_axe: '🪓 Rìu Gỗ', wood_pickaxe: '⛏️ Cúp Gỗ', meat: '🍖 Thịt Cừu'
+        };
+
+        // Sinh hotbar 9 ô
+        const hotbarEl = document.getElementById('hotbar');
+        for(let i=0; i<9; i++) {
+            hotbarEl.innerHTML += `<div class="slot ${i===0?'active':''}" id="slot-${i}" onclick="selectSlot(${i})">
+                <div class="item-name-float" id="name-${i}"></div>
+                <span class="qty" id="qty-${i}"></span>
+            </div>`;
+        }
+
+        function updateUI() {
+            document.getElementById('hp-bar').innerText = '♥'.repeat(hp) + '♡'.repeat(10-hp);
+            document.getElementById('hunger-bar').innerText = '🍗'.repeat(hunger) + '🦴'.repeat(10-hunger);
             
-            if(type === 'break') {
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            } else if(type === 'place') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+            for(let i=0; i<9; i++) {
+                let item = hotbarItems[i];
+                let slot = document.getElementById(`slot-${i}`);
+                if(item && inventory[item] > 0) {
+                    slot.style.backgroundColor = (item === 'wood') ? '#6c584c' : (item === 'dirt') ? '#9c6644' : (item === 'planks') ? '#ddb892' : (item === 'stone') ? '#7f8c8d' : (item==='leaves')?'#52b788':'#2196f3';
+                    document.getElementById(`qty-${i}`).innerText = inventory[item];
+                    document.getElementById(`name-${i}`).innerText = itemNames[item];
+                } else {
+                    slot.style.backgroundColor = '#fff';
+                    document.getElementById(`qty-${i}`).innerText = '';
+                    document.getElementById(`name-${i}`).innerText = '';
+                }
             }
         }
 
-        // --- 2. HỆ THỐNG DỮ LIỆU GAME VÀ CÔNG THỨC MINI WORLD ---
-        let inventory = { wood: 4, planks: 0, crafting_table: 0, dirt: 5, leaves: 0 }; 
-        let hotbarIds = ['wood', 'planks', 'crafting_table', 'dirt'];
-        let activeSlotIndex = 0;
-        let currentTab = 'inv';
-        let nearCraftingTable = false;
+        function selectSlot(idx) {
+            document.getElementById(`slot-${activeSlot}`).classList.remove('active');
+            activeSlot = idx;
+            document.getElementById(`slot-${activeSlot}`).classList.add('active');
+            updateHandItem();
+        }
 
-        // --- 3. KHỞI TẠO ĐỒ HỌA 3D ---
+        // --- 2. SETUP KHÔNG GIAN GAME 3D ---
         const scene = new THREE.Scene();
-        let skyColor = new THREE.Color(0x87CEEB);
-        scene.background = skyColor;
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.04);
-
+        scene.background = new THREE.Color(0x87CEEB); 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        const playerGroup = new THREE.Group();
+        scene.add(playerGroup);
+        playerGroup.add(camera);
+        camera.position.set(0, 1.6, 0);
+
         const renderer = new THREE.WebGLRenderer({ antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.6); sunLight.position.set(10, 30, 10); scene.add(sunLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        sunLight.position.set(15, 45, 15); scene.add(sunLight);
 
-        // --- 4. TẠO VẬT LIỆU HOẠT HÌNH TƯƠI SÁNG ---
-        function createCartoonTexture(baseColor, detailColor, pattern) {
-            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = baseColor; ctx.fillRect(0,0,16,16);
-            ctx.fillStyle = detailColor;
-            if(pattern === 'dirt') { ctx.fillRect(2,3,3,2); ctx.fillRect(9,10,4,2); ctx.fillRect(11,2,2,3); }
-            if(pattern === 'planks') { ctx.fillRect(0,4,16,1); ctx.fillRect(0,9,16,1); ctx.fillRect(0,14,16,1); ctx.fillRect(5,0,1,4); ctx.fillRect(11,5,1,4); }
-            if(pattern === 'wood') { ctx.fillRect(0,0,16,2); ctx.fillRect(0,14,16,2); ctx.strokeRect(2,2,12,12); }
-            if(pattern === 'leaves') { ctx.fillRect(1,2,2,2); ctx.fillRect(6,5,3,3); ctx.fillRect(11,10,3,2); }
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
-            return new THREE.MeshLambertMaterial({ map: tex });
+        // --- TỰ ĐỘNG XOAY MÀN HÌNH MƯỢT MÀ KHÔNG MÓP HÌNH ---
+        let joyCenter = { x: 80, y: window.innerHeight - 80 };
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            joyCenter.x = 80; 
+            joyCenter.y = window.innerHeight - 80;
+        });
+
+        // --- 3. ĐỊNH NGHĨA KHỐI VẬT LIỆU ---
+        function getMat(color) { return new THREE.MeshLambertMaterial({ color: color }); }
+        const mats = {
+            dirt: getMat(0x9c6644), wood: getMat(0x6c584c), planks: getMat(0xddb892), stone: getMat(0x7f8c8d), leaves: getMat(0x38b000),
+            copper: getMat(0xd35400), silver: getMat(0xbdc3c7), iron: getMat(0xe67e22), gold: getMat(0xf1c40f), diamond: getMat(0x3498db),
+            wood_axe: getMat(0xa78bfa), wood_pickaxe: getMat(0xf43f5e)
+        };
+        const geo = new THREE.BoxGeometry(1, 1, 1);
+        let blocks = [];
+
+        // Vật phẩm hiển thị trên tay
+        const handGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+        let handMesh = new THREE.Mesh(handGeo, mats.dirt);
+        handMesh.position.set(0.35, -0.3, -0.55);
+        camera.add(handMesh);
+
+        function updateHandItem() {
+            let item = hotbarItems[activeSlot];
+            if(item && inventory[item] > 0 && !isThirdPerson) {
+                handMesh.visible = true;
+                handMesh.material = mats[item] || mats.dirt;
+            } else { handMesh.visible = false; }
+        }
+                    // --- 4. THUẬT TOÁN CHUNK KIỂM SOÁT 7GB RAM (MAP SÂU 100 BLOCK VÔ TẬN) ---
+        const CHUNK_SIZE = 8;
+        const VIEW_DISTANCE = 2; // Tầm nhìn bán kính quanh người chơi để tối ưu cho trình duyệt điện thoại
+        const MAP_DEPTH = 100;   // Đúng chuẩn độ sâu 100 block
+        let loadedChunks = {};
+        let worldSeed = Math.random() * 80;
+
+        function getSurfaceHeight(x, z) {
+            let n1 = Math.sin(x * 0.11 + worldSeed) * Math.cos(z * 0.11 + worldSeed) * 3;
+            let n2 = Math.sin(x * 0.035) * Math.sin(z * 0.035) * 9; 
+            return Math.floor(n1 + n2 + 73); // Mặt đất nằm ở tầng ~73
         }
 
-        const matDirt = createCartoonTexture('#9c6644', '#7f5539', 'dirt');
-        const matWood = createCartoonTexture('#6c584c', '#adc178', 'wood');
-        const matPlanks = createCartoonTexture('#ddb892', '#b08968', 'planks');
-        const matLeaves = createCartoonTexture('#52b788', '#74c69d', 'leaves');
-        
-        const canvasCT = document.createElement('canvas'); canvasCT.width=16; canvasCT.height=16;
-        const ctxCT = canvasCT.getContext('2d'); ctxCT.fillStyle="#ffd100"; ctxCT.fillRect(0,0,16,16);
-        ctxCT.fillStyle="#0f4c81"; ctxCT.fillRect(3,3,10,10);
-        const texCT = new THREE.CanvasTexture(canvasCT); texCT.magFilter = THREE.NearestFilter;
-        const matCraftingTable = new THREE.MeshLambertMaterial({ map: texCT });
+        function generateChunk(chunkX, chunkZ) {
+            let chunkKey = `${chunkX},${chunkZ}`;
+            if (loadedChunks[chunkKey]) return;
+            let chunkBlocks = [];
 
-        const blockMaterials = { wood: matWood, planks: matPlanks, crafting_table: matCraftingTable, dirt: matDirt, leaves: matLeaves };
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const blocks = [];
+            for (let x = 0; x < CHUNK_SIZE; x++) {
+                for (let z = 0; z < CHUNK_SIZE; z++) {
+                    let worldX = chunkX * CHUNK_SIZE + x;
+                    let worldZ = chunkZ * CHUNK_SIZE + z;
+                    let surfaceY = getSurfaceHeight(worldX, worldZ);
 
-        // --- 5. SINH ĐỊA HÌNH VÀ CÂY CỐI ---
-        for (let x = -12; x <= 12; x++) {
-            for (let z = -12; z <= 12; z++) {
-                const block = new THREE.Mesh(geometry, matDirt); block.position.set(x, 0, z); block.blockType = 'dirt';
-                scene.add(block); blocks.push(block);
+                    for (let y = 0; y <= surfaceY; y++) {
+                        if (y > MAP_DEPTH) break;
+                        let type = 'stone';
+                        let depth = surfaceY - y;
+
+                        if (depth === 0) type = 'dirt';
+                        else if (depth <= 2) type = 'dirt';
+                        else {
+                            let r = Math.random();
+                            if (y <= 15) { // Tầng siêu sâu lòng đất: Xuất hiện Kim Cương & Vàng
+                                if (r < 0.03) type = 'diamond';
+                                else if (r < 0.08) type = 'gold';
+                            } else if (y <= 45) { // Tầng sâu vừa: Phân bổ Quặng Sắt và Bạc
+                                if (r < 0.08) type = 'iron';
+                                else if (r < 0.13) type = 'silver';
+                            } else if (y <= 65) { // Tầng nông gần mặt đất: Có Quặng Đồng dồi dào
+                                if (r < 0.12) type = 'copper';
+                            }
+                        }
+
+                        // Thuật toán đục hang rỗng ngẫu nhiên dưới lòng đất
+                        let isCave = (Math.sin(worldX * 0.35) + Math.cos(y * 0.45) + Math.sin(worldZ * 0.35) > 1.6) && (depth > 4);
+
+                        if (!isCave) {
+                            let mesh = new THREE.Mesh(geo, mats[type]);
+                            mesh.position.set(worldX, y, worldZ); mesh.blockType = type;
+                            scene.add(mesh); blocks.push(mesh); chunkBlocks.push(mesh);
+                        }
+                    }
+                }
             }
+            loadedChunks[chunkKey] = chunkBlocks;
         }
-        function generateTree(tx, tz) {
-            for(let h=1; h<=3; h++) {
-                const log = new THREE.Mesh(geometry, matWood); log.position.set(tx, h, tz); log.blockType = 'wood';
-                scene.add(log); blocks.push(log);
+
+        function updateChunks() {
+            let pChunkX = Math.floor(playerGroup.position.x / CHUNK_SIZE);
+            let pChunkZ = Math.floor(playerGroup.position.z / CHUNK_SIZE);
+
+            for (let x = -VIEW_DISTANCE; x <= VIEW_DISTANCE; x++) {
+                for (let z = -VIEW_DISTANCE; z <= VIEW_DISTANCE; z++) {
+                    generateChunk(pChunkX + x, pChunkZ + z);
+                }
             }
-            for(let lx=-1; lx<=1; lx++) {
-                for(let lz=-1; lz<=1; lz++) {
-                    const leaf = new THREE.Mesh(geometry, matLeaves); leaf.position.set(tx+lx, 4, tz+lz); leaf.blockType = 'leaves';
-                    scene.add(leaf); blocks.push(leaf);
+            // Giải phóng RAM: Tự động gỡ các khối quá xa tầm nhìn để máy mát không giật lag
+            for (let key in loadedChunks) {
+                let [cx, cz] = key.split(',').map(Number);
+                if (Math.abs(cx - pChunkX) > VIEW_DISTANCE + 1 || Math.abs(cz - pChunkZ) > VIEW_DISTANCE + 1) {
+                    loadedChunks[key].forEach(mesh => {
+                        scene.remove(mesh);
+                        let idx = blocks.indexOf(mesh); if (idx > -1) blocks.splice(idx, 1);
+                    });
+                    delete loadedChunks[key];
                 }
             }
         }
-        generateTree(4, 4); generateTree(-5, 3); generateTree(0, -5);
-        camera.position.set(0, 2, 6);
-                  // --- 6. XOAY CAMERA MƯỢT MÀ BẰNG CẢM ỨNG VUỐT ---
-        let touchStart = { x: 0, y: 0 }; let rotation = { x: 0, y: 0 };
-        window.addEventListener('touchstart', (e) => { if(e.touches[0].clientX > window.innerWidth / 2) { touchStart.x = e.touches[0].clientX; touchStart.y = e.touches[0].clientY; } });
-        window.addEventListener('touchmove', (e) => {
-            if(e.touches[0].clientX > window.innerWidth / 2) {
-                const deltaX = e.touches[0].clientX - touchStart.x; const deltaY = e.touches[0].clientY - touchStart.y;
-                rotation.y -= deltaX * 0.006; rotation.x -= deltaY * 0.006;
-                rotation.x = Math.max(-Math.PI/2.3, Math.min(Math.PI/2.3, rotation.x));
-                camera.quaternion.setFromEuler(new THREE.Euler(rotation.x, rotation.y, 0, 'YXZ'));
-                touchStart.x = e.touches[0].clientX; touchStart.y = e.touches[0].clientY;
+
+        // --- 5. SINH VẬT CÓ AI & THANH MÁU NỔI (TRANG 4) ---
+        const mobMesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.3, 0.7), getMat(0xdd1c1c));
+        mobMesh.position.set(2, 76, -5); mobMesh.isMob = true;
+        mobMesh.hp = 5; mobMesh.maxHp = 5;
+        scene.add(mobMesh);
+
+        let mobTimer = 0; let mobDir = new THREE.Vector3(1, 0, 0);
+        function updateMobAI(delta) {
+            if (mobMesh.hp <= 0) return;
+            mobTimer += delta;
+            if(mobTimer > 3) {
+                mobDir.set((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2).normalize(); mobTimer = 0;
             }
-        });
+            mobMesh.position.addScaledVector(mobDir, delta * 1.3);
 
-        // --- 7. ĐIỀU KHIỂN DI CHUYỂN NÚT ẢO D-PAD ---
-        const move = { f: false, b: false, l: false, r: false };
-        let velocity = new THREE.Vector3(), canJump = false;
-        function setupMoveBtn(id, direction) {
-            const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); move[direction] = true; });
-            btn.addEventListener('touchend', () => move[direction] = false);
-        }
-        setupMoveBtn('btn-w', 'f'); setupMoveBtn('btn-s', 'b'); setupMoveBtn('btn-a', 'l'); setupMoveBtn('btn-d', 'r');
-        document.getElementById('btn-jump').addEventListener('touchstart', () => { if(canJump) velocity.y += 8.5; });
-
-        // --- 8. CƠ CHẾ CHẶT CÂY & ĐẶT KHỐI CHUẨN ---
-        const raycaster = new THREE.Raycaster(); const center = new THREE.Vector2(0, 0);
-
-        document.getElementById('btn-break').addEventListener('touchstart', () => {
-            raycaster.setFromCamera(center, camera);
-            const intersects = raycaster.intersectObjects(blocks);
-            if (intersects.length > 0 && intersects[0].distance < 5) {
-                const target = intersects[0].object;
-                playSound('break');
-                if(inventory[target.blockType] !== undefined) inventory[target.blockType]++;
-                else inventory[target.blockType] = 1;
-                scene.remove(target);
-                blocks.splice(blocks.indexOf(target), 1);
-                updateUI(); checkCraftingTableProximity();
-            }
-        });
-
-        document.getElementById('btn-place').addEventListener('touchstart', () => {
-            const currentItem = hotbarIds[activeSlotIndex];
-            if (!currentItem || inventory[currentItem] <= 0) return;
-
-            raycaster.setFromCamera(center, camera);
-            const intersects = raycaster.intersectObjects(blocks);
-            if (intersects.length > 0 && intersects[0].distance < 5) {
-                const intersect = intersects[0];
-                const newBlock = new THREE.Mesh(geometry, blockMaterials[currentItem]);
-                newBlock.position.copy(intersect.object.position).add(intersect.face.normal);
-                newBlock.blockType = currentItem;
-                
-                playSound('place');
-                scene.add(newBlock); blocks.push(newBlock);
-                inventory[currentItem]--;
-                updateUI(); checkCraftingTableProximity();
-            }
-        });
-
-        function checkCraftingTableProximity() {
-            nearCraftingTable = false;
+            let mX = Math.round(mobMesh.position.x); let mZ = Math.round(mobMesh.position.z);
+            let mFloorY = 0;
             for(let b of blocks) {
-                if(b.blockType === 'crafting_table' && camera.position.distanceTo(b.position) < 4.5) {
-                    nearCraftingTable = true; break;
+                if(Math.round(b.position.x) === mX && Math.round(b.position.z) === mZ) {
+                    if(b.position.y > mFloorY) mFloorY = b.position.y;
                 }
             }
+            mobMesh.position.y = mFloorY + 1.15;
+
+            // Chiếu thanh máu từ 3D ra màn hình 2D điện thoại
+            let wp = new THREE.Vector3(); mobMesh.getWorldPosition(wp); wp.y += 0.8; wp.project(camera);
+            const mobHpUI = document.getElementById('mob-hp-container');
+            let dist = camera.position.distanceTo(mobMesh.position);
+            
+            if(Math.abs(wp.x) < 1 && Math.abs(wp.y) < 1 && wp.z < 1 && dist < 9) {
+                mobHpUI.style.left = `${(wp.x * 0.5 + 0.5) * window.innerWidth}px`;
+                mobHpUI.style.top = `${(-(wp.y * 0.5) + 0.5) * window.innerHeight}px`;
+                mobHpUI.style.display = 'block';
+                document.getElementById('mob-hp-text').innerText = '♥'.repeat(mobMesh.hp) + '♡'.repeat(mobMesh.maxHp - mobMesh.hp);
+            } else { mobHpUI.style.display = 'none'; }
+            }
+                    // --- 6. HỆ THỐNG ĐIỀU KHIỂN SỜ CHẠM JOYSTICK ---
+        const joyZone = document.getElementById('joystick-zone');
+        const joyKnob = document.getElementById('joystick-knob');
+        let joyData = { x: 0, y: 0, active: false };
+        
+        joyZone.addEventListener('touchstart', (e) => { joyData.active = true; updateJoy(e.touches[0]); });
+        joyZone.addEventListener('touchmove', (e) => { updateJoy(e.touches[0]); });
+        joyZone.addEventListener('touchend', () => { joyData.active = false; joyData.x = 0; joyData.y = 0; joyKnob.style.transform = `translate(0px, 0px)`; });
+
+        function updateJoy(touch) {
+            let dx = touch.clientX - joyCenter.x; let dy = touch.clientY - joyCenter.y;
+            let distance = Math.sqrt(dx*dx + dy*dy);
+            if(distance > 40) { dx = (dx/distance)*40; dy = (dy/distance)*40; }
+            joyKnob.style.transform = `translate(${dx}px, ${dy}px)`; joyData.x = dx / 40; joyData.y = dy / 40;
         }
 
-        // --- 9. HỆ THỐNG KHO ĐỒ VÀ GIAO DIỆN CHẾ TẠO ---
+        const touchRight = document.getElementById('touch-right');
+        let lookStart = {x:0, y:0}, rot = {x:0, y:0};
+        let touchTimer = 0; let isTouchingRight = false; let touchMoved = false;
+        const progressUI = document.getElementById('break-progress');
+        const raycaster = new THREE.Raycaster();
+        
+        touchRight.addEventListener('touchstart', (e) => {
+            lookStart.x = e.touches[0].clientX; lookStart.y = e.touches[0].clientY;
+            isTouchingRight = true; touchTimer = 0; touchMoved = false;
+            progressUI.style.display = 'block'; progressUI.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+        });
+
+        touchRight.addEventListener('touchmove', (e) => {
+            let dx = e.touches[0].clientX - lookStart.x; let dy = e.touches[0].clientY - lookStart.y;
+            if(Math.abs(dx) > 6 || Math.abs(dy) > 6) touchMoved = true;
+            rot.y -= dx * 0.005; rot.x -= dy * 0.005;
+            rot.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, rot.x));
+            playerGroup.rotation.y = rot.y; if(!isThirdPerson) camera.rotation.x = rot.x;
+            lookStart.x = e.touches[0].clientX; lookStart.y = e.touches[0].clientY;
+        });
+
+        touchRight.addEventListener('touchend', () => {
+            progressUI.style.display = 'none'; isTouchingRight = false;
+            if(touchTimer < 0.22 && !touchMoved) { // Cơ chế chạm nhả để đặt khối nhanh
+                let item = hotbarItems[activeSlot];
+                if(item && inventory[item] > 0) {
+                    raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+                    let hit = raycaster.intersectObjects(blocks);
+                    if(hit.length > 0 && hit[0].distance < 6) {
+                        let pos = hit[0].object.position.clone().add(hit[0].face.normal);
+                        let mesh = new THREE.Mesh(geo, mats[item]); mesh.position.set(pos.x, pos.y, pos.z); mesh.blockType = item;
+                        scene.add(mesh); blocks.push(mesh); inventory[item]--; updateUI(); updateHandItem();
+                    }
+                }
+            }
+        });
+
+        let velocity = new THREE.Vector3(); let canJump = false;
+        document.getElementById('btn-jump').addEventListener('touchstart', () => { if(canJump) velocity.y = (moveState==='sprint')?12:9; });
+
+        // --- 7. HOÁN ĐỔI Ô BALO 5X8 & LOGIC BÀN CHẾ TẠO ---
+        let selectedBagSlot = null;
         function toggleBackpack() {
-            const overlay = document.getElementById('backpack-overlay');
-            overlay.style.display = (overlay.style.display === 'flex') ? 'none' : 'flex';
-            if(overlay.style.display === 'flex') { checkCraftingTableProximity(); switchTab(currentTab); }
+            const screen = document.getElementById('backpack-screen');
+            screen.style.display = (screen.style.display === 'none') ? 'block' : 'none';
+            if(screen.style.display === 'block') renderBackpack();
         }
-        document.getElementById('btn-bag').addEventListener('touchstart', toggleBackpack);
+        document.getElementById('btn-bag').ontouchstart = (e) => { e.preventDefault(); toggleBackpack(); };
 
-        function switchTab(tab) {
-            currentTab = tab;
-            document.getElementById('tab-inv').classList.toggle('active', tab === 'inv');
-            document.getElementById('tab-craft').classList.toggle('active', tab === 'craft');
+        function renderBackpack() {
             const grid = document.getElementById('backpack-grid'); grid.innerHTML = '';
-
-            if (tab === 'inv') {
-                grid.innerHTML += `<div class="grid-item">Khối Gỗ<br>x${inventory.wood}</div>`;
-                grid.innerHTML += `<div class="grid-item">Ván Gỗ<br>x${inventory.planks}</div>`;
-                grid.innerHTML += `<div class="grid-item">Bàn CT<br>x${inventory.crafting_table}</div>`;
-                grid.innerHTML += `<div class="grid-item">Khối Đất<br>x${inventory.dirt}</div>`;
-                grid.innerHTML += `<div class="grid-item">Lá Cây<br>x${inventory.leaves}</div>`;
-            } else {
-                grid.innerHTML += `<div class="grid-item" onclick="craftItem('planks')" style="background:#ffd100; color:#0f4c81;">Bào Ván Gỗ<br><small>(Tốn 1 Gỗ)</small></div>`;
-                grid.innerHTML += `<div class="grid-item" onclick="craftItem('crafting_table')" style="background:#ffd100; color:#0f4c81;">Ghép Bàn CT<br><small>(Tốn 4 Ván)</small></div>`;
-
-                if(nearCraftingTable) {
-                    grid.innerHTML += `<div class="grid-item" onclick="craftItem('special')" style="background:#a2d2ff; grid-column: span 2; border: 2px dashed #0f4c81;">🛠️ KIẾM GỖ CAO CẤP<br><small>(Công thức nâng cao)</small></div>`;
-                } else {
-                    grid.innerHTML += `<div class="grid-item" style="background:#ccc; grid-column: span 2; color:#777; font-size:10px; cursor:default;">🔒 Đặt Bàn Chế Tạo xuống đất và đứng gần để mở công thức nâng cao</div>`;
-                }
+            for(let i=0; i<40; i++) {
+                let item = bagItems[i]; let color = '#333';
+                if(item) color = (item==='wood')?'#6c584c':(item==='stone')?'#7f8c8d':'#d35400';
+                let isSel = selectedBagSlot === i ? 'border: 2px solid #ffd100;' : 'border: 1px solid #444;';
+                grid.innerHTML += `<div onclick="selectBagSlot(${i})" style="background:${color}; ${isSel} border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; aspect-ratio:1;">
+                    ${item ? itemNames[item].substring(0,4) : ''}
+                </div>`;
             }
         }
 
-        function craftItem(type) {
-            if (type === 'planks' && inventory.wood >= 1) { inventory.wood -= 1; inventory.planks += 4; } 
-            else if (type === 'crafting_table' && inventory.planks >= 4) { inventory.planks -= 4; inventory.crafting_table += 1; } 
-            else if (type === 'special') { alert("Bạn đã chế tạo thành công công cụ cao cấp từ bàn chế tạo!"); return; }
-            else { alert("Thiếu nguyên liệu rồi cậu ơi!"); return; }
-            updateUI(); switchTab('craft');
+        function selectBagSlot(idx) {
+            if(selectedBagSlot === null) { selectedBagSlot = idx; } 
+            else {
+                let temp = bagItems[selectedBagSlot]; bagItems[selectedBagSlot] = bagItems[idx]; bagItems[idx] = temp;
+                selectedBagSlot = null;
+            }
+            renderBackpack();
         }
 
-        function selectSlot(idx) { activeSlotIndex = idx; for(let i=0; i<4; i++) document.getElementById('s'+i).classList.toggle('active', i === idx); }
-        function updateUI() { for(let i=0; i<4; i++) { document.getElementById('c'+i).innerText = inventory[hotbarIds[i]]; } }
-        updateUI();
+        function craftItem(target) {
+            if(target === 'planks' && inventory.wood >= 1) { inventory.wood--; inventory.planks += 4; } 
+            else if((target==='wood_axe' || target==='wood_pickaxe') && inventory.planks >= 3 && inventory.wood >= 2) {
+                inventory.planks -= 3; inventory.wood -= 2; inventory[target]++;
+            } else { alert("Không đủ nguyên liệu rồi!"); return; }
+            alert("Chế tạo thành công!"); updateUI(); updateHandItem();
+        }
 
-        // --- 10. VÒNG LẶP DI CHUYỂN & HỆ THỐNG THỜI GIAN NGÀY/ĐÊM ---
+        // --- 8. ĐỔI TRẠNG THÁI CAMERA & DI CHUYỂN ---
+        document.getElementById('btn-movement').addEventListener('touchstart', () => {
+            const b = document.getElementById('btn-movement');
+            if(moveState === 'normal') { moveState = 'sprint'; b.innerText = 'Chạy Nhanh'; b.style.background = '#e65100'; }
+            else if(moveState === 'sprint') { moveState = 'sneak'; b.innerText = 'Ẩn Thân'; b.style.background = '#455a64'; }
+            else { moveState = 'normal'; b.innerText = 'Bình Thường'; b.style.background = 'rgba(0,0,0,0.6)'; }
+        });
+
+        document.getElementById('btn-camera').addEventListener('touchstart', () => {
+            isThirdPerson = !isThirdPerson;
+            if(isThirdPerson) { camera.position.set(0, 2.5, 4.5); camera.lookAt(playerGroup.position); document.getElementById('btn-camera').innerText = 'Góc nhìn 3'; handMesh.visible = false; } 
+            else { camera.position.set(0, 1.6, 0); camera.rotation.set(0,0,0); document.getElementById('btn-camera').innerText = 'Góc nhìn 1'; updateHandItem(); }
+        });
+
+        // --- 9. VÒNG LẶP CHÍNH HOẠT HÌNH VÀ VẬT LÝ ---
         const clock = new THREE.Clock();
-        let gameTime = 0;
-
         function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
+            requestAnimationFrame(animate); let delta = clock.getDelta();
+            updateChunks(); updateMobAI(delta);
 
-            gameTime += delta * 0.05;
-            let lightCycle = (Math.sin(gameTime) + 1) / 2;
-            skyColor.setHSL(0.55, 0.5, lightCycle * 0.5 + 0.2);
-            ambientLight.intensity = lightCycle * 0.6 + 0.3;
+            // Đập khối/Đánh quái theo công cụ (Trang 3)
+            if(isTouchingRight && !touchMoved) {
+                touchTimer += delta; progressUI.style.transform = `translate(-50%, -50%) rotate(${touchTimer * 520}deg)`;
+                raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+                let hit = raycaster.intersectObjects([...blocks, mobMesh]);
+                if(hit.length > 0 && hit[0].distance < 5) {
+                    let target = hit[0].object; let heldItem = hotbarItems[activeSlot];
+                    if(target.isMob) {
+                        if(touchTimer > 0.45) {
+                            target.hp--; if(target.hp <= 0) { scene.remove(target); inventory.meat++; hunger = Math.min(10, hunger+3); alert("Hạ quái vật thành công! Nhận Thịt Cừu hồi đói."); }
+                            isTouchingRight = false; progressUI.style.display = 'none';
+                        } return;
+                    }
+                    let req = 0.95; 
+                    if(target.blockType === 'stone') req = (heldItem === 'wood_pickaxe') ? 0.25 : 3.6; // Có cúp gỗ phá đá siêu tốc, không có cúp mỏi nhừ tay đúng ý cậu
+                    if(target.blockType === 'wood' && heldItem === 'wood_axe') req = 0.2;
+                    if(touchTimer > req) {
+                        if(inventory[target.blockType] !== undefined) inventory[target.blockType]++;
+                        scene.remove(target); blocks.splice(blocks.indexOf(target), 1);
+                        updateUI(); isTouchingRight = false; progressUI.style.display = 'none';
+                    }
+                }
+            }
 
-            velocity.x -= velocity.x * 10.0 * delta; velocity.z -= velocity.z * 10.0 * delta; velocity.y -= 24.0 * delta;
+            // Thuật toán trọng lực rơi tự do phân tầng sâu (Trang 5)
+            velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta; velocity.y -= 25 * delta;
+            let speed = (moveState === 'sprint') ? 36 : (moveState === 'sneak') ? 14 : 24;
+            let dir = new THREE.Vector3(joyData.x, 0, joyData.y).applyQuaternion(playerGroup.quaternion);
+            velocity.x += dir.x * speed * delta; velocity.z += dir.z * speed * delta;
 
-            const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); camDir.y = 0; camDir.normalize();
-            const camRight = new THREE.Vector3(); camRight.crossVectors(camera.up, camDir).normalize();
+            let pX = Math.round(playerGroup.position.x); let pZ = Math.round(playerGroup.position.z);
+            let floorY = 0;
+            for(let b of blocks) {
+                if(Math.round(b.position.x) === pX && Math.round(b.position.z) === pZ) {
+                    if(b.position.y > floorY && b.position.y <= playerGroup.position.y - 1.5) floorY = b.position.y;
+                }
+            }
+            playerGroup.position.x += velocity.x * delta; playerGroup.position.z += velocity.z * delta; playerGroup.position.y += velocity.y * delta;
 
-            let moveVector = new THREE.Vector3();
-            if (move.f) moveVector.add(camDir); if (move.b) moveVector.sub(camDir);
-            if (move.l) moveVector.add(camRight); if (move.r) moveVector.sub(camRight);
-            moveVector.normalize();
-
-            velocity.x += moveVector.x * 32.0 * delta; velocity.z += moveVector.z * 32.0 * delta;
-            camera.position.x += velocity.x * delta; camera.position.z += velocity.z * delta; camera.position.y += velocity.y * delta;
-
-            if (camera.position.y < 2) { velocity.y = 0; camera.position.y = 2; canJump = true; } 
-            else { canJump = false; }
-
+            let standH = floorY + 0.5 + 1.6;
+            if(playerGroup.position.y < standH) { playerGroup.position.y = standH; velocity.y = 0; canJump = true; } else { canJump = false; }
             renderer.render(scene, camera);
         }
-        animate();
 
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        // Đặt người chơi ở tầng cao rồi thả rơi tự do tiếp đất núi
+        playerGroup.position.set(0, 82, 0); updateChunks(); updateUI(); updateHandItem(); animate();
     </script>
 </body>
 </html>
