@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Mini World Mobile Ultra-Smooth</title>
+    <title>Mini World Mobile Clean Architecture</title>
     <style>
         * { box-sizing: border-box; -webkit-user-select: none; user-select: none; margin: 0; padding: 0; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
@@ -46,10 +46,9 @@
     </div>
     <div id="hotbar"></div>
     <div id="mob-hp-container" style="position: absolute; display: none; background: rgba(0,0,0,0.8); border: 2px solid #ff5252; padding: 3px 6px; border-radius: 6px; color: white; font-size: 11px; font-weight: bold; z-index: 6; pointer-events: none;">
-        🐗 Dã Nhân: <span id="mob-hp-text" style="color: #ff5252;">♥♥♥♥♥</span>
+        🐗 Dã Nhân: <span id="mob-hp-text" style="color: #ff5252;">♥♥♥♥ Bak</span>
     </div>
-
-    <div id="backpack-screen">
+        <div id="backpack-screen">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h3 style="color: #ffd100; font-size: 15px;">🎒 TÚI ĐỒ & CHẾ TẠO</h3>
             <button onclick="toggleBackpack()" style="padding: 4px 12px; background: #ef4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">ĐÓNG</button>
@@ -66,15 +65,16 @@
             </div>
         </div>
     </div>
-        <script>
+
+    <script>
         let hp = 10, hunger = 10, moveState = 'normal', isThirdPerson = false;
-        let inventory = { wood: 10, planks: 0, dirt: 15, stone: 0, copper: 0, silver: 0, iron: 0, gold: 0, diamond: 0, wood_axe: 0, wood_pickaxe: 0, meat: 0 };
-        let hotbarItems = ['wood', 'planks', 'wood_axe', 'wood_pickaxe', 'dirt', 'stone', 'meat', null, null];
+        let inventory = { wood: 10, planks: 0, dirt: 15, stone: 0, copper: 0, silver: 0, iron: 0, gold: 0, diamond: 0, wood_axe: 0, wood_pickaxe: 0, monster_essence: 0 };
+        let hotbarItems = ['wood', 'planks', 'wood_axe', 'wood_pickaxe', 'dirt', 'stone', 'monster_essence', null, null];
         let bagItems = new Array(40).fill(null); bagItems[0] = 'wood'; bagItems[1] = 'dirt';
         let activeSlot = 0;
 
-        const itemNames = { wood: 'Khối Gỗ', planks: 'Ván Gỗ', dirt: 'Khối Đất', stone: 'Khối Đá', copper: 'Quặng Đồng', silver: 'Quặng Bạc', iron: 'Quặng Sắt', gold: 'Quặng Vàng', diamond: 'Kim Cương', wood_axe: '🪓 Rìu Gỗ', wood_pickaxe: '⛏️ Cúp Gỗ', meat: '🍖 Thịt Cừu' };
-        const blockIcons = { wood: '🪵', planks: '📦', dirt: '🟫', stone: '🪨', copper: '🟤', silver: '⚪', iron: '🟠', gold: '🟡', diamond: '🔷', wood_axe: '🪓', wood_pickaxe: '⛏️', meat: '🍖' };
+        const itemNames = { wood: 'Khối Gỗ', planks: 'Ván Gỗ', dirt: 'Khối Đất', stone: 'Khối Đá', copper: 'Quặng Đồng', silver: 'Quặng Bạc', iron: 'Quặng Sắt', gold: 'Quặng Vàng', diamond: 'Kim Cương', wood_axe: '🪓 Rìu Gỗ', wood_pickaxe: '⛏️ Cúp Gỗ', monster_essence: '🧬 Tinh Huyết' };
+        const blockIcons = { wood: '🪵', planks: '📦', dirt: '🟫', stone: '🪨', copper: '🟤', silver: '⚪', iron: '🟠', gold: '🟡', diamond: '🔷', wood_axe: '🪓', wood_pickaxe: '⛏️', monster_essence: '🧬' };
 
         const hotbarEl = document.getElementById('hotbar');
         for(let i=0; i<9; i++) {
@@ -102,8 +102,7 @@
             }
         }
         function selectSlot(idx) { document.getElementById(`slot-${activeSlot}`).classList.remove('active'); activeSlot = idx; document.getElementById(`slot-${activeSlot}`).classList.add('active'); updateHandItem(); }
-
-        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); 
+                const scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
         const playerGroup = new THREE.Group(); scene.add(playerGroup); playerGroup.add(camera); camera.position.set(0, 1.6, 0);
 
@@ -121,35 +120,26 @@
             let item = hotbarItems[activeSlot];
             if(item && inventory[item] > 0 && !isThirdPerson && mats[item]) { handMesh.visible = true; handMesh.material = mats[item]; } else { handMesh.visible = false; }
         }
-
-        // --- BỘ LÕI ĐỊA HÌNH MA TRẬN ĐỨNG IM (SHIFT-POOLING) CHỐNG ĐƠ APP TUYỆT ĐỐI ---
-        const CHUNK_SIZE = 8; const MAP_DEPTH = 30; // Giới hạn độ sâu vừa vặn cho điện thoại nhẹ máy mượt
-        let loadedChunks = {}; 
-        let chunkPool = {}; // Chứa đúng 9 cụm Mesh cố định tuần hoàn
-        let worldSeed = 24.15;
+                const CHUNK_SIZE = 8; 
+        const MAP_DEPTH = 50;       
+        const MAX_BUILD_HEIGHT = 200; 
+        let loadedChunks = {}; let chunkPool = {}; let worldSeed = 31.64;
 
         function getSurfaceHeight(x, z) {
-            let n = Math.sin(x * 0.1 + worldSeed) * Math.cos(z * 0.1 + worldSeed) * 3;
-            return Math.floor(n + 15);
+            let n = Math.sin(x * 0.08 + worldSeed) * Math.cos(z * 0.08 + worldSeed) * 4;
+            return Math.floor(n + 35); 
         }
 
-        // Tạo sẵn khung Mesh tĩnh cho toàn bộ 9 khu vực xung quanh ngay từ đầu
         function initStaticMeshPool() {
             let dummy = new THREE.Object3D();
-            // Khởi tạo trước cho ma trận xoay vòng bán kính 1 chunk xung quanh tâm (9 vị trí)
             for(let cx = -1; cx <= 1; cx++) {
                 for(let cz = -1; cz <= 1; cz++) {
-                    let key = `${cx},${cz}`;
-                    chunkPool[key] = [];
-                    
-                    // Tạo sẵn cấu trúc khối cho từng loại vật liệu để tái sử dụng ma trận dịch chuyển
+                    let key = `${cx},${cz}`; chunkPool[key] = [];
                     for(let type in mats) {
                         let maxBlocksInChunk = CHUNK_SIZE * CHUNK_SIZE * MAP_DEPTH;
                         let instMesh = new THREE.InstancedMesh(geo, mats[type], maxBlocksInChunk);
-                        instMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // Ép GPU cho phép đổi tọa độ theo thời gian thực
-                        instMesh.isWorldBlock = true;
-                        instMesh.count = 0; // Ban đầu chưa có khối nào kích hoạt
-                        scene.add(instMesh);
+                        instMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                        instMesh.isWorldBlock = true; instMesh.count = 0; scene.add(instMesh);
                         chunkPool[key].push({ type: type, mesh: instMesh });
                     }
                     fillChunkData(cx, cz);
@@ -158,27 +148,21 @@
         }
 
         function fillChunkData(chunkX, chunkZ) {
-            let key = `${chunkX},${chunkZ}`;
-            let pools = chunkPool[key];
-            if(!pools) return;
-
-            let dummy = new THREE.Object3D();
-            let blockLists = {};
-            for(let type in mats) blockLists[type] = [];
+            let key = `${chunkX},${chunkZ}`; let pools = chunkPool[key]; if(!pools) return;
+            let dummy = new THREE.Object3D(); let blockLists = {}; for(let type in mats) blockLists[type] = [];
 
             for (let x = 0; x < CHUNK_SIZE; x++) {
                 for (let z = 0; z < CHUNK_SIZE; z++) {
-                    let worldX = chunkX * CHUNK_SIZE + x;
-                    let worldZ = chunkZ * CHUNK_SIZE + z;
+                    let worldX = chunkX * CHUNK_SIZE + x; let worldZ = chunkZ * CHUNK_SIZE + z;
                     let surfaceY = getSurfaceHeight(worldX, worldZ);
-
+                    
                     for (let y = 0; y <= surfaceY; y++) {
                         let type = 'stone'; let depth = surfaceY - y;
                         if (depth === 0 || depth <= 2) type = 'dirt';
                         else {
                             let r = Math.random();
-                            if (y <= 4) { if (r < 0.05) type = 'diamond'; else if (r < 0.1) type = 'gold'; }
-                            else if (y <= 9) { if (r < 0.1) type = 'iron'; }
+                            if (y <= 8) { if (r < 0.05) type = 'diamond'; else if (r < 0.1) type = 'gold'; }
+                            else if (y <= 18) { if (r < 0.1) type = 'iron'; }
                             else { if (r < 0.12) type = 'copper'; }
                         }
                         blockLists[type].push({x: worldX, y: y, z: worldZ});
@@ -186,51 +170,39 @@
                 }
             }
 
-            // Gán trực tiếp dữ liệu tọa độ mới vào khung Mesh có sẵn mà không cần hủy/tạo lại
             pools.forEach(p => {
-                let list = blockLists[p.type];
-                p.mesh.count = list.length;
+                let list = blockLists[p.type]; p.mesh.count = list.length;
                 let internalPositions = [];
                 for(let i = 0; i < list.length; i++) {
-                    dummy.position.set(list[i].x, list[i].y, list[i].z);
-                    dummy.updateMatrix();
+                    dummy.position.set(list[i].x, list[i].y, list[i].z); dummy.updateMatrix();
                     p.mesh.setMatrixAt(i, dummy.matrix);
                     internalPositions.push({ x: list[i].x, y: list[i].y, z: list[i].z, idx: i, type: p.type });
                 }
-                p.mesh.instanceMatrix.needsUpdate = true;
-                p.mesh.blockPositions = internalPositions;
+                p.mesh.instanceMatrix.needsUpdate = true; p.mesh.blockPositions = internalPositions;
             });
             loadedChunks[key] = { cx: chunkX, cz: chunkZ };
         }
-                    function updateChunksInfinite() {
+                function updateChunksInfinite() {
             let pChunkX = Math.floor(playerGroup.position.x / CHUNK_SIZE);
             let pChunkZ = Math.floor(playerGroup.position.z / CHUNK_SIZE);
 
-            // Kiểm tra xem người chơi có bước sang ranh giới chunk mới hay không
             for (let key in loadedChunks) {
-                let ch = loadedChunks[key];
-                let dx = ch.cx - pChunkX;
-                let dz = ch.cz - pChunkZ;
-
-                // Nếu cụm chunk này bị tụt lại quá xa sau lưng, tiến hành hoán vị nó lên trước mặt
+                let ch = loadedChunks[key]; let dx = ch.cx - pChunkX; let dz = ch.cz - pChunkZ;
                 if (Math.abs(dx) > 1 || Math.abs(dz) > 1) {
                     let newCx = pChunkX - (ch.cx - pChunkX);
                     if(Math.abs(dx) > 1) newCx = pChunkX + Math.sign(ch.cx - pChunkX) * -1;
                     let newCz = pChunkZ - (ch.cz - pChunkZ);
                     if(Math.abs(dz) > 1) newCz = pChunkZ + Math.sign(ch.cz - pChunkZ) * -1;
 
-                    // Xóa nhãn cũ, nạp đè dữ liệu tọa độ mới vào chính cụm Mesh đó
-                    delete loadedChunks[key];
-                    fillChunkData(newCx, newCz);
-                    break; 
+                    delete loadedChunks[key]; fillChunkData(newCx, newCz); break; 
                 }
             }
         }
 
-        // --- AI ĐỐI TƯỢNG DÃ NHÂN ---
         const mobMesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.2, 0.7), getMat(0xcc0000));
-        mobMesh.position.set(2, 16, -3); mobMesh.isMob = true; mobMesh.hp = 5; mobMesh.maxHp = 5; scene.add(mobMesh);
+        mobMesh.position.set(2, 40, -3); mobMesh.isMob = true; mobMesh.hp = 5; mobMesh.maxHp = 5; scene.add(mobMesh);
         let mobTimer = 0, mobDir = new THREE.Vector3(1, 0, 0);
+        
         function updateMobAI(delta) {
             if (mobMesh.hp <= 0) return; mobTimer += delta;
             if(mobTimer > 3) { mobDir.set((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2).normalize(); mobTimer = 0; }
@@ -246,7 +218,9 @@
             } else { mobHpUI.style.display = 'none'; }
         }
 
-        // --- ĐIỀU KHIỂN CẢM ỨNG SUÔN SẺ TRÊN MOBILE ---
+        let joyCenter = { x: window.innerWidth * 0.15, y: window.innerHeight * 0.75 };
+        window.addEventListener('resize', () => { renderer.setSize(window.innerWidth, window.innerHeight); camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); joyCenter = { x: window.innerWidth * 0.15, y: window.innerHeight * 0.75 }; });
+        
         const joyZone = document.getElementById('joystick-zone'); const joyKnob = document.getElementById('joystick-knob');
         let joyData = { x: 0, y: 0, active: false };
         joyZone.addEventListener('touchstart', (e) => { joyData.active = true; updateJoy(e.touches[0]); });
@@ -257,8 +231,7 @@
             if(distance > 30) { dx = (dx/distance)*30; dy = (dy/distance)*30; }
             joyKnob.style.transform = `translate(${dx}px, ${dy}px)`; joyData.x = dx / 30; joyData.y = dy / 30;
         }
-
-        const touchRight = document.getElementById('touch-right'); let lookStart = {x:0, y:0}, rot = {x:0, y:0};
+                const touchRight = document.getElementById('touch-right'); let lookStart = {x:0, y:0}, rot = {x:0, y:0};
         let touchTimer = 0, isTouchingRight = false, touchMoved = false;
         const progressUI = document.getElementById('break-progress'), raycaster = new THREE.Raycaster();
         
@@ -283,7 +256,8 @@
                             let instanceId = hit[0].instanceId; let blockPositions = hit[0].object.blockPositions;
                             if (blockPositions && blockPositions[instanceId]) pos.set(blockPositions[instanceId].x, blockPositions[instanceId].y, blockPositions[instanceId].z).add(hit[0].face.normal);
                         } else { pos = hit[0].object.position.clone().add(hit[0].face.normal); }
-                        if (pos.length() > 0) {
+                        
+                        if (pos.length() > 0 && pos.y <= MAX_BUILD_HEIGHT) {
                             let mesh = new THREE.Mesh(geo, mats[item]); mesh.position.set(pos.x, pos.y, pos.z); mesh.blockType = item;
                             scene.add(mesh); customPlacedBlocks.push(mesh); inventory[item]--; updateUI(); updateHandItem();
                         }
@@ -336,8 +310,16 @@
                 let hit = raycaster.intersectObjects([...scene.children, ...customPlacedBlocks, mobMesh]);
                 if(hit.length > 0 && hit[0].distance < 4.5) {
                     let target = hit[0].object; let heldItem = hotbarItems[activeSlot];
+                    
                     if(target.isMob || target === mobMesh) {
-                        if(touchTimer > 0.4) { mobMesh.hp--; if(mobMesh.hp <= 0) { scene.remove(mobMesh); inventory.meat++; hunger = Math.min(10, hunger+3); } isTouchingRight = false; progressUI.style.display = 'none'; } return;
+                        if(touchTimer > 0.4) { 
+                            mobMesh.hp--; 
+                            if(mobMesh.hp <= 0) { 
+                                scene.remove(mobMesh); 
+                                if(inventory['monster_essence'] !== undefined) inventory['monster_essence'] += 1;
+                            } 
+                            isTouchingRight = false; progressUI.style.display = 'none'; 
+                        } return; 
                     }
                     let req = 0.7; let blockType = 'dirt';
                     if (target.isWorldBlock) {
@@ -353,7 +335,6 @@
                 }
             }
 
-            // HỆ VẬT LÝ TUYỆT ĐỐI KHÔNG GHẼN CPU (Dùng hàm toán học)
             velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta; velocity.y -= 20 * delta;
             let speed = (moveState === 'sprint') ? 30 : (moveState === 'sneak') ? 12 : 20;
             let dir = new THREE.Vector3(joyData.x, 0, joyData.y).applyQuaternion(playerGroup.quaternion);
@@ -362,11 +343,17 @@
             playerGroup.position.x += velocity.x * delta; playerGroup.position.z += velocity.z * delta; playerGroup.position.y += velocity.y * delta;
             let currentSurfaceY = getSurfaceHeight(playerGroup.position.x, playerGroup.position.z);
             let standH = currentSurfaceY + 1.1;
+            
+            customPlacedBlocks.forEach(b => {
+                if(Math.abs(playerGroup.position.x - b.position.x) < 0.6 && Math.abs(playerGroup.position.z - b.position.z) < 0.6) {
+                    if(playerGroup.position.y >= b.position.y + 1.0 && playerGroup.position.y <= b.position.y + 1.25) { standH = b.position.y + 1.1; }
+                }
+            });
+
             if(playerGroup.position.y < standH) { playerGroup.position.y = standH; velocity.y = 0; canJump = true; } else { canJump = false; }
             renderer.render(scene, camera);
         }
 
-        // Kích hoạt bệ phóng trò chơi an toàn
         initStaticMeshPool();
         playerGroup.position.set(0, getSurfaceHeight(0, 0) + 1.2, 0);
         updateUI(); updateHandItem(); animate();
